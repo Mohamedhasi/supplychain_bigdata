@@ -1,24 +1,24 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, trim, when, round
 
-# ✅ Step 1: Initialize Spark Session
+#  Initialize Spark Session
 spark = SparkSession.builder \
     .appName("SupplyChainDataCleaning") \
     .config("spark.hadoop.fs.defaultFS", "hdfs://localhost:9000") \
     .getOrCreate()
 
-print("\n🚀 Spark session started successfully!\n")
+print("\n Spark session started successfully!\n")
 
-# ✅ Step 2: Load Raw Data from HDFS
+#  Load Raw Data from HDFS
 input_path = "hdfs://localhost:9000/user/hadoop/supply_chain_input/supply_chain_data.txt"
-print(f"📂 Reading data from: {input_path}\n")
+print(f" Reading data from: {input_path}\n")
 
 df = spark.read.csv(input_path, header=True, inferSchema=True)
-print("✅ Data successfully loaded. Showing sample rows:")
+print(" Data successfully loaded. Showing sample rows:")
 df.show(5)
 
-# ✅ Step 3: Data Cleaning + Transformation
-print("\n🧹 Cleaning data and calculating delivery delay...\n")
+#  Data Cleaning + Transformation
+print("\n Cleaning data and calculating delivery delay...\n")
 
 cleaned_df = (
     df.select([trim(col(c)).alias(c) for c in df.columns])  # Trim spaces
@@ -46,18 +46,18 @@ cleaned_df = (
       .withColumn("supplier_location_lon", when(col("supplier_location_lon").isNull(), 0).otherwise(col("supplier_location_lon")))
 )
 
-print("✅ Cleaned Data Preview:")
+print(" Cleaned Data Preview:")
 cleaned_df.select("product_type", "lead_time_days", "shipping_time_days", "delivery_delay_days", "price").show(10)
 
-# ✅ Step 4: Write Processed Data to HDFS (Parquet Format)
+# Write Processed Data to HDFS (Parquet Format)
 output_path = "hdfs://localhost:9000/user/hadoop/supply_chain_processed/"
 cleaned_df.write.mode("overwrite").parquet(output_path)
-print(f"💾 Cleaned data successfully saved to: {output_path}")
+print(f" Cleaned data successfully saved to: {output_path}")
 
-# ✅ Step 5: Run Simple Spark SQL Query
+#  Run Simple Spark SQL Query
 cleaned_df.createOrReplaceTempView("supply_chain")
 
-print("\n📊 Average Delivery Delay by Product Type:")
+print("\n Average Delivery Delay by Product Type:")
 spark.sql("""
     SELECT product_type, 
            ROUND(AVG(delivery_delay_days), 2) AS avg_delay,
@@ -68,5 +68,5 @@ spark.sql("""
 """).show(10)
 
 spark.stop()
-print("\n🏁 Job completed successfully!\n")
+print("\n Job completed successfully!\n")
 
