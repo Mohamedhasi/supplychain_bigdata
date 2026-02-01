@@ -8,7 +8,7 @@ from pyspark.ml import Pipeline
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 
 # -----------------------------
-# Step 0: Spark Session
+#  Spark Session
 # -----------------------------
 spark = SparkSession.builder \
     .appName("SupplyChainPredictiveAnalytics_Optimized") \
@@ -17,13 +17,13 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # -----------------------------
-# Step 1: Read Data
+# Read Data
 # -----------------------------
 input_path = "hdfs://localhost:9000/user/hadoop/supply_chain_processed/"
 df = spark.read.parquet(input_path)
 
 # -----------------------------
-# Step 2: Numeric Conversion
+# Numeric Conversion
 # -----------------------------
 numeric_cols = [
     "price", "shipping_cost", "lead_time_days", "order_quantity",
@@ -39,7 +39,7 @@ df = df.withColumn("label", when(col("delivery_delay_days").rlike("^[0-9.]+$"),
                                  col("delivery_delay_days").cast(DoubleType())).otherwise(0.0))
 
 # -----------------------------
-# Step 3: Features
+# Features
 # -----------------------------
 categorical_cols = ["product_type", "supplier_name", "transportation_mode"]
 feature_cols = numeric_cols
@@ -54,14 +54,14 @@ assembler = VectorAssembler(
 )
 
 # -----------------------------
-# Step 4: Train/Test Split
+# Train/Test Split
 # -----------------------------
 train_df, test_df = df.randomSplit([0.8, 0.2], seed=42)
 train_df.cache()
 test_df.cache()
 
 # -----------------------------
-# Step 5: Random Forest Model
+# Random Forest Model
 # -----------------------------
 rf = RandomForestRegressor(featuresCol="features", labelCol="label", seed=42)
 
@@ -86,16 +86,16 @@ cv_model = cv.fit(train_df)
 predictions = cv_model.transform(test_df)
 rmse = evaluator.evaluate(predictions)
 r2 = RegressionEvaluator(labelCol="label", predictionCol="prediction", metricName="r2").evaluate(predictions)
-print(f"📊 Random Forest Model: RMSE={rmse:.2f}, R²={r2:.2f}")
+print(f" Random Forest Model: RMSE={rmse:.2f}, R²={r2:.2f}")
 
 best_model_pipeline = cv_model.bestModel
 
 # -----------------------------
-# Step 6: Save Model
+# Save Model
 # -----------------------------
 model_output_path = "hdfs://localhost:9000/user/hadoop/supply_chain_models/RandomForest_predictor"
 best_model_pipeline.write().overwrite().save(model_output_path)
-print(f"💾 Model saved to: {model_output_path}")
+print(f" Model saved to: {model_output_path}")
 
 # -----------------------------
 # Step 7: Feature Importance
@@ -103,12 +103,12 @@ print(f"💾 Model saved to: {model_output_path}")
 feature_importances = best_model_pipeline.stages[-1].featureImportances
 all_features = [f"{c}_indexed" for c in categorical_cols] + feature_cols
 importance_list = sorted(zip(all_features, feature_importances), key=lambda x: x[1], reverse=True)
-print("\n🌟 Feature Importances:")
+print("\n Feature Importances:")
 for f, imp in importance_list:
     print(f"{f}: {imp:.4f}")
 
 # -----------------------------
-# Step 8: Predict New Data
+#  Predict New Data
 # -----------------------------
 new_data = spark.createDataFrame([
     ("Electronics", "Supplier A", "Air", 1200, 350, 5, 100, 80, 450, 30, 5000, 1.2)
